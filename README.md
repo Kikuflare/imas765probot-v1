@@ -2,14 +2,20 @@
 
 ## About
 
-This is the code that runs several of my Twitter bots, located at the following locations:
+imas765probot is a script that runs several image bots on Twitter.
 
 https://twitter.com/makomakorin_bot  
-https://twitter.com/harurunbot  
-https://twitter.com/yukipyon_bot  
+https://twitter.com/harurun_bot_  
+https://twitter.com/chihaya_bot_  
 https://twitter.com/yayoicchi_bot  
+https://twitter.com/iorin_bot_  
 https://twitter.com/amimami_bot  
+https://twitter.com/yukipyon_bot  
 https://twitter.com/ohimechin_bot  
+https://twitter.com/mikimiki_bot_  
+https://twitter.com/hibikin_bot_  
+https://twitter.com/azusa_bot__  
+https://twitter.com/ricchan_bot_  
 
 imas765probot runs on Python 3 and uses a modified version of the tweepy library to interact with Twitter. The script is hosted on Heroku and tweets every hour on the dot. In addition, the script checks for new followers every 20 minutes and will attempt to follow back new followers.
 

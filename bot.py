@@ -38,7 +38,7 @@ class Bot:
         self.auth = tweepy.OAuthHandler(app_keys['consumer_key'], app_keys['consumer_secret'])
         self.auth.set_access_token(self.access_token, self.access_token_secret)
         self.auth.secure = True
-        self.api = tweepy.API(self.auth)
+        self.api = tweepy.API(self.auth, timeout=5)
         
     def tweet(self):
         """
@@ -111,7 +111,10 @@ class Bot:
                         print("{0}: Could not tweet file. Reason: {1} ({2})".format(self.api.me().screen_name, error.reason, error.response.status_code))
                         continue # Error *may* be temporary, try tweeting again
                 else:
+                    # Possible errors:
+                    # "Failed to send request: HTTPSConnectionPool(host='upload.twitter.com', port=443): Read timed out"
                     print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
+                    continue # You know the drill
 
             except TypeError as error:
                 print("{0}: Could not tweet file. Uploading failed.".format(self.api.me().screen_name))
