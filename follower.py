@@ -46,7 +46,7 @@ def main():
     for page in tweepy.Cursor(api.friends_ids).pages():
         friends.extend(page)
         
-        if len(friends) < myself.friends_count:
+        if len(friends) > 5000:
             time.sleep(60)
             
     # Grab list of users who follow the account
@@ -54,7 +54,7 @@ def main():
     for page in tweepy.Cursor(api.followers_ids).pages():
         followers.extend(page)
         
-        if len(followers) < myself.followers_count:
+        if len(followers) > 5000:
             time.sleep(60)
     
     print("Following {} users.".format(len(friends)))

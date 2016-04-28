@@ -2,6 +2,7 @@
 
 import tweepy
 import os
+import time
 import random
 import datetime
 import psycopg2
@@ -184,6 +185,8 @@ class Bot:
         unfollow() will be called on a timely basis, so it is unlikely the limit will be
         reached, but nevertheless, if the limit is reached, any users left over will be
         unfollowed on the next call to unfollow().
+        
+        Possible bug with tweepy? Incorrect friends_count.
         """
         try:
             myself = self.api.me()
@@ -193,7 +196,7 @@ class Bot:
             for page in tweepy.Cursor(self.api.friends_ids).pages():
                 friends.extend(page)
                 
-                if len(friends) < myself.friends_count:
+                if len(friends) > 5000:
                     time.sleep(60)
                     
             # Grab list of users who follow the account (list of ids)
@@ -201,7 +204,7 @@ class Bot:
             for page in tweepy.Cursor(self.api.followers_ids).pages():
                 followers.extend(page)
                 
-                if len(followers) < myself.followers_count:
+                if len(followers) > 5000:
                     time.sleep(60)
                     
             not_following = 0
