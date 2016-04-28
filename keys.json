@@ -9,6 +9,7 @@
 	"example" : {
 		"tweet_enabled" : true,
 		"follow_back_enabled" : true,
+		"unfollow_enabled" : true,
 		"screen_name" : "example",
 		"access_token" : "example",
 		"access_token_secret" : "example",

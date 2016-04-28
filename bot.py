@@ -21,6 +21,7 @@ class Bot:
         """
         self.tweet_enabled = bot_keys['tweet_enabled']
         self.follow_back_enabled = bot_keys['follow_back_enabled']
+        self.unfollow_enabled = bot_keys['unfollow_enabled']
         self.access_token = bot_keys['access_token']
         self.access_token_secret = bot_keys['access_token_secret']
         self.queue_table = bot_keys['queue_table']
@@ -49,7 +50,7 @@ class Bot:
         for attempt in range(self.max_download_attempts):
             # Pop the newest filepath from the queue, determine destination temp filepath
             filepath = self.get_newest_row(self.queue_table)
-            self.delete_row(self.queue_table, filepath)
+            self.delete_row(self.queue_table, 'filepath', filepath)
             temp_file = os.path.abspath(filepath)
             dirname = os.path.dirname(temp_file)
 
@@ -159,6 +160,74 @@ class Bot:
                             else:
                                 print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
 
+        except tweepy.error.TweepError as error:
+            if error.response is not None:
+                if error.response.status_code == 429:
+                    print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                elif error.response.status_code == 500:
+                    print("{0}: Could not follow user. Twitter server error.".format(self.api.me().screen_name))
+                elif error.response.status_code == 503:
+                    print("{0}: Could not follow user. Service unavailable.".format(self.api.me().screen_name))
+                else:
+                    print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+            else:
+                print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
+
+
+    def unfollow(self):
+        """
+        Retrieves a list of all friends and all followers, and checks for friends who are no
+        longer following. Retrieval is broken into pages of 5000 users at maximum and will
+        wait 60 seconds between pages if there is more than one page.
+        
+        Calls to GET users/lookup are rate limited to 180 requests in a 15 minute interval.
+        unfollow() will be called on a timely basis, so it is unlikely the limit will be
+        reached, but nevertheless, if the limit is reached, any users left over will be
+        unfollowed on the next call to unfollow().
+        """
+        try:
+            myself = self.api.me()
+            
+            # Grab list of users that the account is following (list of ids)
+            friends = []
+            for page in tweepy.Cursor(self.api.friends_ids).pages():
+                friends.extend(page)
+                
+                if len(friends) < myself.friends_count:
+                    time.sleep(60)
+                    
+            # Grab list of users who follow the account (list of ids)
+            followers = []
+            for page in tweepy.Cursor(self.api.followers_ids).pages():
+                followers.extend(page)
+                
+                if len(followers) < myself.followers_count:
+                    time.sleep(60)
+                    
+            not_following = 0
+            
+            # Check relationship status for each user and add them to a list if they are not following
+            for friend in friends:
+                if friend not in followers:
+                    try:
+                        user = self.api.get_user(friend)
+                        user.unfollow()
+                        self.delete_row(self.request_sent_table, 'id', user.id_str)
+                        print("{0}: Unfollowed {1}".format(self.api.me().screen_name, user.screen_name))
+                        
+                        not_following += 1
+                        if not_following >= 180:
+                            break # Quit unfollowing if we hit the limit
+                            
+                    except tweepy.error.TweepError as error:
+                        if error.response is not None:
+                            if error.response.status_code == 403:
+                                print("{0}: Could not unfollow user. {1}".format(self.api.me().screen_name, error.reason))
+                            elif error.response.status_code == 429:
+                                print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                            else:
+                                print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                                
         except tweepy.error.TweepError as error:
             if error.response is not None:
                 if error.response.status_code == 429:
@@ -306,11 +375,11 @@ class Bot:
 
 
     # Delete a single row in the table
-    def delete_row(self, table_name, id):
+    def delete_row(self, table_name, field, id):
         conn = self.create_connection()
         cur = conn.cursor()
 
-        cur.execute("DELETE FROM {} WHERE filepath = ('{}')".format(table_name, id))
+        cur.execute("DELETE FROM {0} WHERE {1} = ('{2}')".format(table_name, field, id))
 
         conn.commit()
         cur.close()
@@ -339,11 +408,20 @@ class Bot:
     # Helper function for creating a connection to the database
     def create_connection(self):
         parsed_url = urlparse(self.database_url)
-        return psycopg2.connect(database=parsed_url.path[1:],
-                                user=parsed_url.username,
-                                password=parsed_url.password,
-                                host=parsed_url.hostname,
-                                port=parsed_url.port)
+        
+        # Keep trying if the connection failed
+        while True:
+            try:
+                return psycopg2.connect(database=parsed_url.path[1:],
+                                        user=parsed_url.username,
+                                        password=parsed_url.password,
+                                        host=parsed_url.hostname,
+                                        port=parsed_url.port)
+            except psycopg2.OperationalError as error:
+                # This can sometimes occur as "psycopg2.OperationalError: could not translate hostname" error
+                # DNS Error?
+                print("{0}: Could not connect to the database.".format(self.api.me().screen_name))
+                
 
 
     # Check if the given id is in a request_sent table (returns either True or False)

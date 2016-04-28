@@ -89,8 +89,8 @@ def main():
             if ricchan_bot_.tweet_enabled and (ricchan_bot_.count_rows(ricchan_bot_.queue_table) > 0):
                 ricchan_bot_.tweet()
                 
-        # Follow back users (every 20 minutes at minute 10, 30, 50)
-        if (minute + 10) % 20 == 0:
+        # Follow back users (every 30 minutes at minute 15 and 45)
+        if (minute + 15) % 30 == 0:
             if makomakorin_bot.follow_back_enabled:
                 makomakorin_bot.follow_back()
                 
@@ -126,6 +126,44 @@ def main():
                 
             if ricchan_bot_.follow_back_enabled:
                 ricchan_bot_.follow_back()
+                
+        # Unfollow users who are no longer following (every hour at minute 30)
+        if (minute + 30) % 60 == 0:
+            if makomakorin_bot.unfollow_enabled:
+                makomakorin_bot.unfollow()
+                
+            if harurun_bot_.unfollow_enabled:
+                harurun_bot_.unfollow()
+                
+            if chihaya_bot_.unfollow_enabled:
+                chihaya_bot_.unfollow()
+                
+            if yayoicchi_bot.unfollow_enabled:
+                yayoicchi_bot.unfollow()
+                
+            if iorin_bot_.unfollow_enabled:
+                iorin_bot_.unfollow()
+                
+            if amimami_bot.unfollow_enabled:
+                amimami_bot.unfollow()
+                
+            if yukipyon_bot.unfollow_enabled:
+                yukipyon_bot.unfollow()
+                
+            if ohimechin_bot.unfollow_enabled:
+                ohimechin_bot.unfollow()
+                
+            if mikimiki_bot_.unfollow_enabled:
+                mikimiki_bot_.unfollow()
+                
+            if hibikin_bot_.unfollow_enabled:
+                hibikin_bot_.unfollow()
+                
+            if azusa_bot__.unfollow_enabled:
+                azusa_bot__.unfollow()
+                
+            if ricchan_bot_.unfollow_enabled:
+                ricchan_bot_.unfollow()
         
         # If a queue is empty, start a new queue
         if makomakorin_bot.count_rows(makomakorin_bot.queue_table) == 0:

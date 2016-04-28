@@ -1,3 +1,4 @@
+import sys
 import json
 import tweepy
 import time
@@ -6,19 +7,18 @@ import time
 Short script for getting a list of friends who are not following you. In other
 words, users who you follow but do not follow you back. Results are printed as:
 
-[user id] [screen name] [followed by]
+[user id] [screen name]
 
-Simply replace the value of the key variable with the key of the account in
-the keys.json file. If there is no keys.json file, you can simply write the
-keys and secrets directly into this script.
+Simply run this script by passing the key of the account as the first argument.
+If there is no keys.json file, you can simply write the keys and secrets
+directly into this script.
 
-WARNING: Calls to GET friendships/show are rate limited to 180 requests in a 15
-minute interval. This script will sleep for 5 seconds between each call in order
-to respect the API limit. Therefore, the minimum expected time to complete
-execution is (number of people following * 5 seconds).
+WARNING: Calls to GET users/lookup are rate limited to 180 requests in a 15
+minute interval. This script will sleep for 15 minutes if it hits 180 requests
+in order to respect the API limit.
 """
 
-key = 'example' # replace this with a key from keys.json
+key = sys.argv[1] # Assigned to command line argument
 
 with open('keys.json') as key_data:
     key_dict = json.load(key_data)
@@ -48,6 +48,14 @@ def main():
         
         if len(friends) < myself.friends_count:
             time.sleep(60)
+            
+    # Grab list of users who follow the account
+    followers = []
+    for page in tweepy.Cursor(api.followers_ids).pages():
+        followers.extend(page)
+        
+        if len(followers) < myself.followers_count:
+            time.sleep(60)
     
     print("Following {} users.".format(len(friends)))
     
@@ -55,18 +63,14 @@ def main():
     
     # Check relationship status for each user and add them to a list if they are not following
     for friend in friends:
-        friendship = api.show_friendship(target_id=friend)[1]
-        print("{} {} followed_by={}".format(friendship.id, friendship.screen_name,friendship.following))
-        
-        if not friendship.following:
-            not_following.append(friendship)
-        
-        # We must wait 5 seconds between each call to show_friendship or we will exceed the rate limit
-        time.sleep(5)
-        
+        if friend not in followers:
+            user = api.get_user(friend)
+            not_following.append(user)
+            if len(not_following) >= 180:
+                time.sleep(900)
     
     print("")
-    print("Friends that are not following ({0}):".format(screen_name))
+    print("Friends who are not following ({0}):".format(screen_name))
     for friend in not_following:
         print("{} {}".format(friend.id, friend.screen_name))
     
