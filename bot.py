@@ -196,7 +196,7 @@ class Bot:
             for page in tweepy.Cursor(self.api.friends_ids).pages():
                 friends.extend(page)
                 
-                if len(friends) > 5000:
+                if len(page) == 5000:
                     time.sleep(60)
                     
             # Grab list of users who follow the account (list of ids)
@@ -204,7 +204,7 @@ class Bot:
             for page in tweepy.Cursor(self.api.followers_ids).pages():
                 followers.extend(page)
                 
-                if len(followers) > 5000:
+                if len(page) == 5000:
                     time.sleep(60)
                     
             not_following = 0
