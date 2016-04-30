@@ -44,8 +44,9 @@ def main():
     while app_enabled:
         """
         Tweet a media file and follow back new followers. Files should be tweeted every
-        hour on minute 0, while new followers should be followed back every 20 minutes
-        at minute 10, 30, and 50. If a queue is empty, a new queue will be generated.
+        hour on minute 0, while new followers should be followed back every 30 minutes
+        at minute 15 and 45. Unfollow users who have stopped following every 60 minutes
+        at minute 30. If a queue is empty, a new queue will be generated.
         """
 
         # Get current minute
