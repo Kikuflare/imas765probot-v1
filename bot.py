@@ -100,23 +100,42 @@ class Bot:
                 print("{0}: Tweeted file {1}".format(self.api.me().screen_name, os.path.basename(filepath)))
 
             except tweepy.error.TweepError as error:
+                """
+                Sometimes a file may still be tweeted even if the Twitter API returned an error. In
+                this scenario, the bot will end up tweeting the same file again on a subsequent retry.
+                A missed post is better than a double post, but we will attempt to try again if the
+                error was thrown by the call to media_upload rather than update_status.
+                
+                This is under the assumption that if "not ids" evaluates to True (therefore ids is empty),
+                then the error occurred while the file was uploading.
+                
+                """
                 if error.response is not None:
                     if error.response.status_code == 429:
                         print("{0}: Could not tweet file. Request limit reached.".format(self.api.me().screen_name))
                     elif error.response.status_code == 500:
                         print("{0}: Could not tweet file. Twitter server error.".format(self.api.me().screen_name))
-                        continue # Server error is likely temporary, try tweeting again
+                        if not ids:
+                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            continue
                     elif error.response.status_code == 503:
                         print("{0}: Could not tweet file. Service unavailable.".format(self.api.me().screen_name))
-                        continue # Server error is likely temporary, try tweeting again
+                        if not ids:
+                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            continue
                     else:
                         print("{0}: Could not tweet file. Reason: {1} ({2})".format(self.api.me().screen_name, error.reason, error.response.status_code))
-                        continue # Error *may* be temporary, try tweeting again
+                        if not ids:
+                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            continue
                 else:
                     # Possible errors:
                     # "Failed to send request: HTTPSConnectionPool(host='upload.twitter.com', port=443): Read timed out"
+                    # The file can still be tweeted even if this error is thrown!
                     print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
-                    continue # You know the drill
+                    if not ids:
+                        print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                        continue
 
             except TypeError as error:
                 print("{0}: Could not tweet file. Uploading failed.".format(self.api.me().screen_name))
@@ -263,15 +282,6 @@ class Bot:
         
         When building the new queue, the list is traversed in reverse order to make
         the aforementioned group of files go at the front of the queue.
-
-        Arguments:
-        ->queue - Name of the queue table
-        ->recent_queue - Name of the recent queue table
-        ->recent_limit -  Maximum number of files for the recent_queue table
-        ->prefix - The AWS S3 folder in which to look for files
-
-        Example argument list:
-        'makomakorin_bot_queue', 'makomakorin_bot_recent_queue', 96, 'makoto'
 
         NOTE:
         Why do we create a temp2 list with the recent files instead of using recent_queue?
