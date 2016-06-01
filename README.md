@@ -1,5 +1,4 @@
-﻿﻿# imas765probot
-
+﻿#imas765probot
 ## About
 
 imas765probot is a script that runs several image bots on Twitter.
