@@ -131,6 +131,7 @@ class Bot:
                 else:
                     # Possible errors:
                     # "Failed to send request: HTTPSConnectionPool(host='upload.twitter.com', port=443): Read timed out"
+                    # "Failed to send request: ('Connection aborted.', BrokenPipeError(32, 'Broken pipe'))"
                     # The file can still be tweeted even if this error is thrown!
                     print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
                     if not ids:
@@ -246,20 +247,20 @@ class Bot:
                             if error.response.status_code == 403:
                                 print("{0}: Could not unfollow user. {1}".format(self.api.me().screen_name, error.reason))
                             elif error.response.status_code == 429:
-                                print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                                print("{0}: Could not unfollow user. Request limit reached.".format(self.api.me().screen_name))
                             else:
-                                print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                                print("{0}: Could not unfollow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
                                 
         except tweepy.error.TweepError as error:
             if error.response is not None:
                 if error.response.status_code == 429:
-                    print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Request limit reached.".format(self.api.me().screen_name))
                 elif error.response.status_code == 500:
-                    print("{0}: Could not follow user. Twitter server error.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Twitter server error.".format(self.api.me().screen_name))
                 elif error.response.status_code == 503:
-                    print("{0}: Could not follow user. Service unavailable.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Service unavailable.".format(self.api.me().screen_name))
                 else:
-                    print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                    print("{0}: Could not unfollow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
             else:
                 print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
 
