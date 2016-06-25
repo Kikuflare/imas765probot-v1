@@ -23,6 +23,7 @@ class Bot:
         self.tweet_enabled = bot_keys['tweet_enabled']
         self.follow_back_enabled = bot_keys['follow_back_enabled']
         self.unfollow_enabled = bot_keys['unfollow_enabled']
+        self.screen_name = bot_keys['screen_name']
         self.access_token = bot_keys['access_token']
         self.access_token_secret = bot_keys['access_token_secret']
         self.queue_table = bot_keys['queue_table']
@@ -65,13 +66,13 @@ class Bot:
             try:
                 self.s3.meta.client.download_file(self.bucket_name, filepath, temp_file)
             except FileNotFoundError as error:
-                print("{0}: Could not download file, the destination folder does not exist.".format(self.api.me().screen_name))
+                print("{0}: Could not download file, the destination folder does not exist.".format(self.screen_name))
                 continue
             except botocore.exceptions.ClientError as error:
-                print("{0}: Could not download file, the file does not exist in the bucket.".format(self.api.me().screen_name))
+                print("{0}: Could not download file, the file does not exist in the bucket.".format(self.screen_name))
                 continue
             except IsADirectoryError as error:
-                print("{0}: There was an error when saving the file (attempted to download a folder instead of a file).".format(self.api.me().screen_name))
+                print("{0}: There was an error when saving the file (attempted to download a folder instead of a file).".format(self.screen_name))
                 break
                 
             self.tweet_media(filepath)
@@ -97,7 +98,7 @@ class Bot:
 
                 # Use the media_id value to tweet the file
                 self.api.update_status(media_ids=ids)
-                print("{0}: Tweeted file {1}".format(self.api.me().screen_name, os.path.basename(filepath)))
+                print("{0}: Tweeted file {1}".format(self.screen_name, os.path.basename(filepath)))
 
             except tweepy.error.TweepError as error:
                 """
@@ -112,34 +113,34 @@ class Bot:
                 """
                 if error.response is not None:
                     if error.response.status_code == 429:
-                        print("{0}: Could not tweet file. Request limit reached.".format(self.api.me().screen_name))
+                        print("{0}: Could not tweet file. Request limit reached.".format(self.screen_name))
                     elif error.response.status_code == 500:
-                        print("{0}: Could not tweet file. Twitter server error.".format(self.api.me().screen_name))
+                        print("{0}: Could not tweet file. Twitter server error.".format(self.screen_name))
                         if not ids:
-                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            print("{0}: Attempting to tweet again.".format(self.screen_name))
                             continue
                     elif error.response.status_code == 503:
-                        print("{0}: Could not tweet file. Service unavailable.".format(self.api.me().screen_name))
+                        print("{0}: Could not tweet file. Service unavailable.".format(self.screen_name))
                         if not ids:
-                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            print("{0}: Attempting to tweet again.".format(self.screen_name))
                             continue
                     else:
-                        print("{0}: Could not tweet file. Reason: {1} ({2})".format(self.api.me().screen_name, error.reason, error.response.status_code))
+                        print("{0}: Could not tweet file. Reason: {1} ({2})".format(self.screen_name, error.reason, error.response.status_code))
                         if not ids:
-                            print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                            print("{0}: Attempting to tweet again.".format(self.screen_name))
                             continue
                 else:
                     # Possible errors:
                     # "Failed to send request: HTTPSConnectionPool(host='upload.twitter.com', port=443): Read timed out"
                     # "Failed to send request: ('Connection aborted.', BrokenPipeError(32, 'Broken pipe'))"
-                    # The file can still be tweeted even if this error is thrown!
-                    print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
+                    # "Failed to send request: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+                    print("{0}: Something went very wrong. Reason: {1}".format(self.screen_name, error.reason))
                     if not ids:
-                        print("{0}: Attempting to tweet again.".format(self.api.me().screen_name))
+                        print("{0}: Attempting to tweet again.".format(self.screen_name))
                         continue
 
             except TypeError as error:
-                print("{0}: Could not tweet file. Uploading failed.".format(self.api.me().screen_name))
+                print("{0}: Could not tweet file. Uploading failed.".format(self.screen_name))
             
             break
 
@@ -167,7 +168,7 @@ class Bot:
                         # Send the follow request
                         follower.follow()
                         self.update_request_sent(follower.id_str, follower.screen_name)
-                        print("{0}: Follow request sent to {1}".format(self.api.me().screen_name, follower.screen_name))
+                        print("{0}: Follow request sent to {1}".format(self.screen_name, follower.screen_name))
 
                     except tweepy.error.TweepError as error:
                         if error.response is not None:
@@ -175,24 +176,24 @@ class Bot:
                                 # This error can occur if a previous follow request is sent to a protected account,
                                 # and the request is still pending approval by the user. It can also occur if the
                                 # user is blocking the account.
-                                print("{0}: Could not follow user {1}. {2}".format(self.api.me().screen_name, follower.screen_name, error.reason))
+                                print("{0}: Could not follow user {1}. {2}".format(self.screen_name, follower.screen_name, error.reason))
                             elif error.response.status_code == 429:
-                                print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                                print("{0}: Could not follow user. Request limit reached.".format(self.screen_name))
                             else:
-                                print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                                print("{0}: Could not follow user. Error status code {1}".format(self.screen_name, error.response.status_code))
 
         except tweepy.error.TweepError as error:
             if error.response is not None:
                 if error.response.status_code == 429:
-                    print("{0}: Could not follow user. Request limit reached.".format(self.api.me().screen_name))
+                    print("{0}: Could not follow user. Request limit reached.".format(self.screen_name))
                 elif error.response.status_code == 500:
-                    print("{0}: Could not follow user. Twitter server error.".format(self.api.me().screen_name))
+                    print("{0}: Could not follow user. Twitter server error.".format(self.screen_name))
                 elif error.response.status_code == 503:
-                    print("{0}: Could not follow user. Service unavailable.".format(self.api.me().screen_name))
+                    print("{0}: Could not follow user. Service unavailable.".format(self.screen_name))
                 else:
-                    print("{0}: Could not follow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                    print("{0}: Could not follow user. Error status code {1}".format(self.screen_name, error.response.status_code))
             else:
-                print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
+                print("{0}: Something went very wrong. Reason: {1}".format(self.screen_name, error.reason))
 
 
     def unfollow(self):
@@ -209,8 +210,6 @@ class Bot:
         Possible bug with tweepy? Incorrect friends_count.
         """
         try:
-            myself = self.api.me()
-            
             # Grab list of users that the account is following (list of ids)
             friends = []
             for page in tweepy.Cursor(self.api.friends_ids).pages():
@@ -236,7 +235,7 @@ class Bot:
                         user = self.api.get_user(friend)
                         user.unfollow()
                         self.delete_row(self.request_sent_table, 'id', user.id_str)
-                        print("{0}: Unfollowed {1}".format(self.api.me().screen_name, user.screen_name))
+                        print("{0}: Unfollowed {1}".format(self.screen_name, user.screen_name))
                         
                         not_following += 1
                         if not_following >= 180:
@@ -245,24 +244,24 @@ class Bot:
                     except tweepy.error.TweepError as error:
                         if error.response is not None:
                             if error.response.status_code == 403:
-                                print("{0}: Could not unfollow user. {1}".format(self.api.me().screen_name, error.reason))
+                                print("{0}: Could not unfollow user. {1}".format(self.screen_name, error.reason))
                             elif error.response.status_code == 429:
-                                print("{0}: Could not unfollow user. Request limit reached.".format(self.api.me().screen_name))
+                                print("{0}: Could not unfollow user. Request limit reached.".format(self.screen_name))
                             else:
-                                print("{0}: Could not unfollow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                                print("{0}: Could not unfollow user. Error status code {1}".format(self.screen_name, error.response.status_code))
                                 
         except tweepy.error.TweepError as error:
             if error.response is not None:
                 if error.response.status_code == 429:
-                    print("{0}: Could not unfollow user. Request limit reached.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Request limit reached.".format(self.screen_name))
                 elif error.response.status_code == 500:
-                    print("{0}: Could not unfollow user. Twitter server error.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Twitter server error.".format(self.screen_name))
                 elif error.response.status_code == 503:
-                    print("{0}: Could not unfollow user. Service unavailable.".format(self.api.me().screen_name))
+                    print("{0}: Could not unfollow user. Service unavailable.".format(self.screen_name))
                 else:
-                    print("{0}: Could not unfollow user. Error status code {1}".format(self.api.me().screen_name, error.response.status_code))
+                    print("{0}: Could not unfollow user. Error status code {1}".format(self.screen_name, error.response.status_code))
             else:
-                print("{0}: Something went very wrong. Reason: {1}".format(self.api.me().screen_name, error.reason))
+                print("{0}: Something went very wrong. Reason: {1}".format(self.screen_name, error.reason))
 
 
     def smart_queue(self):
@@ -434,7 +433,7 @@ class Bot:
             except psycopg2.OperationalError as error:
                 # This can sometimes occur as "psycopg2.OperationalError: could not translate hostname" error
                 # DNS Error?
-                print("{0}: Could not connect to the database.".format(self.api.me().screen_name))
+                print("{0}: Could not connect to the database.".format(self.screen_name))
                 
 
 
