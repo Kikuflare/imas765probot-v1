@@ -20,7 +20,7 @@ in order to respect the API limit.
 
 key = sys.argv[1] # Assigned to command line argument
 
-with open('keys.json') as key_data:
+with open('../keys.json') as key_data:
     key_dict = json.load(key_data)
     
     consumer_key = key_dict['app']['consumer_key']

@@ -3,7 +3,8 @@
 		"enabled" : true,
 		"consumer_key" : "example",
 		"consumer_secret" : "example",
-		"database_url" : "example"
+		"database_url" : "example",
+		"tweet_timeout" : 600
 	},
 	
 	"example" : {

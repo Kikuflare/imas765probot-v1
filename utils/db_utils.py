@@ -10,7 +10,7 @@ To use, replace the code in main() with the desired actions.
 
 """
 
-with open('keys.json') as key_data:
+with open('../keys.json') as key_data:
     key_dict = json.load(key_data)
     
     database_url = key_dict['app']['database_url']

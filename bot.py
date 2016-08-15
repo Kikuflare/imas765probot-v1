@@ -37,6 +37,7 @@ class Bot:
         self.follower_retrieve_limit = bot_keys['follower_retrieve_limit']
         
         self.database_url = app_keys['database_url']
+        self.tweet_timeout = app_keys['tweet_timeout']
         
         self.auth = tweepy.OAuthHandler(app_keys['consumer_key'], app_keys['consumer_secret'])
         self.auth.set_access_token(self.access_token, self.access_token_secret)
@@ -484,3 +485,41 @@ class Bot:
         conn.close()
 
         return entries
+        
+    # Get the timestamp of the most recently added row of the specified table
+    # the timestamp is returned as a datetime object!
+    def get_recent_timestamp(self, table_name):
+        conn = self.create_connection()
+        cur = conn.cursor()
+
+        cur.execute("SELECT timestamp FROM {} ORDER BY timestamp DESC LIMIT 1".format(table_name))
+
+        row = cur.fetchone()[0]
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return row
+        
+    # Get the time difference between now and when the most recent tweet was posted
+    # Returns a timedelta object!
+    def get_time_since_last_tweet(self):
+        timestamp = datetime.datetime.now()
+        recent_tweet_timestamp = self.get_recent_timestamp(self.recent_queue_table)
+        
+        time_difference = timestamp - recent_tweet_timestamp
+        
+        return time_difference
+        
+    """
+    Checks if the bot is allowed to tweet
+    
+    1. tweet_enabled must be set to true in keys.json
+    2. There must be at least one row in the queue
+    3. A certain amount of time must have passed since the last tweet
+       (defined as tweet_timeout in keys.json)
+    
+    """
+    def can_tweet(self):
+        return self.tweet_enabled and self.count_rows(self.queue_table) > 0 and self.get_time_since_last_tweet().seconds > self.tweet_timeout
