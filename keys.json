@@ -4,7 +4,8 @@
 		"consumer_key" : "example",
 		"consumer_secret" : "example",
 		"database_url" : "example",
-		"tweet_timeout" : 600
+		"tweet_timeout" : 600,
+    "shuffle_mode" : true
 	},
 	
 	"example" : {

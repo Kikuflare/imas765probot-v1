@@ -3,6 +3,7 @@
 import json
 import time
 import datetime
+from random import sample
 from bot import Bot
 
 
@@ -13,6 +14,7 @@ with open('keys.json') as key_data:
     app_keys = key_dict['app']
     
     app_enabled = app_keys['enabled']
+    shuffle_mode = app_keys['shuffle_mode']
     
     bots = [Bot(app_keys, key_dict['makomakorin_bot']),
             Bot(app_keys, key_dict['harurun_bot_']),
@@ -48,18 +50,34 @@ def main():
         hour on minute 0, while new followers should be followed back every 30 minutes
         at minute 15 and 45. Unfollow users who have stopped following every 60 minutes
         at minute 30. If a queue is empty, a new queue will be generated.
+        
+        The order the bots tweet in is now shuffled every hour. However, the order
+        that bots follow back and unfollow remain static.
         """
 
         # Get current minute
         minute = datetime.datetime.now().minute
         
-        # Tweet a new media file if current time is on the 0 minute
-        # Certain conditions must be satisfied before tweeting, refer to the comments
-        # for can_tweet() in bot.py
+        """
+        Tweet a new media file if current time is on the 0 minute
+        Certain conditions must be satisfied before tweeting, refer to the comments
+        for can_tweet() in bot.py
+        
+        I use a random sample of the indices for the bot list to simulate a shuffle.
+        This is done instead of using random.shuffle on the bot list because
+        random.shuffle performs an in place shuffle that changes the order of bots
+        in the list. This way, tweets can be in a random order without affecting
+        follow back or unfollow order.
+        """
         if minute % 60 == 0:
-            for bot in bots:
-                if bot.can_tweet():
-                    bot.tweet()
+            if shuffle_mode:
+                for index in sample(range(len(bots)),len(bots)):
+                    if bots[index].can_tweet():
+                        bots[index].tweet()
+            else:
+                for bot in bots:
+                    if bot.can_tweet():
+                        bot.tweet()
                 
         # Follow back users (every 30 minutes at minute 15 and 45)
         if (minute + 15) % 30 == 0:

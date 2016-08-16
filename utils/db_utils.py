@@ -27,6 +27,7 @@ def main():
     drop_table('example_queue')
     clear_table('example_queue')
     insert_row('example_queue', 'filepath', 'example_string')
+    insert_row_into_queue('example_queue', 'example_string', comment=None)
     delete_row('example_queue', 'filepath', 'example_string')
     """
     
@@ -121,6 +122,21 @@ def insert_row(table_name, field, id):
     timestamp = str(datetime.datetime.now())
     
     cur.execute("INSERT INTO {0} ({1}, timestamp) VALUES ('{2}', '{3}')".format(table_name, field, id, timestamp))
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+
+# Insertion specifically into queue tables
+# Queue tables now have the following fields:
+# filepath, comment, timestamp
+def insert_row_into_queue(table_name, filepath, comment=None):
+    conn = create_connection()
+    cur = conn.cursor()
+    
+    timestamp = str(datetime.datetime.now())
+    
+    cur.execute("INSERT INTO {0} (filepath, comment, timestamp) VALUES (%s, %s, %s)".format(table_name), (filepath, comment, timestamp))
     
     conn.commit()
     cur.close()

@@ -52,7 +52,9 @@ class Bot:
         """
         for attempt in range(self.max_download_attempts):
             # Pop the newest filepath from the queue, determine destination temp filepath
-            filepath = self.get_newest_row(self.queue_table)
+            row = self.get_newest_row(self.queue_table)
+            filepath = row[0]
+            comment = row[1]
             self.delete_row(self.queue_table, 'filepath', filepath)
             temp_file = os.path.abspath(filepath)
             dirname = os.path.dirname(temp_file)
@@ -76,7 +78,7 @@ class Bot:
                 print("{0}: There was an error when saving the file (attempted to download a folder instead of a file).".format(self.screen_name))
                 break
                 
-            self.tweet_media(filepath)
+            self.tweet_media(filepath, comment)
             
             # Push the tweeted file into the table of recent tweets, and remove the oldest entries
             # from the table until the limit is reached
@@ -88,7 +90,7 @@ class Bot:
                     
             break
             
-    def tweet_media(self, filepath):
+    def tweet_media(self, filepath, comment):
         # Takes an absolute file path to a media file and posts a tweet with the file.
         for attempt in range(self.max_tweet_attempts):
             try:
@@ -98,7 +100,7 @@ class Bot:
                 ids.append(uploaded['media_id'])
 
                 # Use the media_id value to tweet the file
-                self.api.update_status(media_ids=ids)
+                self.api.update_status(status=comment, media_ids=ids)
                 print("{0}: Tweeted file {1}".format(self.screen_name, os.path.basename(filepath)))
 
             except tweepy.error.TweepError as error:
@@ -322,7 +324,7 @@ class Bot:
 
         for filepath in new_queue[::-1]:
             timestamp = str(datetime.datetime.now())
-            cur.execute("INSERT INTO {0} (filepath, timestamp) VALUES ('{1}', '{2}')".format(self.queue_table, filepath, timestamp))
+            cur.execute("INSERT INTO {0} (filepath, comment, timestamp) VALUES (%s, %s, %s)".format(self.queue_table), (filepath, None, timestamp))
 
         conn.commit()
         cur.close()
@@ -346,14 +348,19 @@ class Bot:
         return count
 
 
-    # Returns the newest row in the table (based on date of insertion)
+    """
+    Returns the newest row in the table (based on date of insertion)
+    This used to return a single field as a string in previous builds, but will
+    now return the entire row as a tuple.
+    
+    """
     def get_newest_row(self, table_name):
         conn = self.create_connection()
         cur = conn.cursor()
 
-        cur.execute("SELECT filepath FROM {} ORDER BY timestamp DESC LIMIT 1".format(table_name))
+        cur.execute("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1".format(table_name))
 
-        row = cur.fetchone()[0]
+        row = cur.fetchone()
 
         conn.commit()
         cur.close()
@@ -485,16 +492,22 @@ class Bot:
         conn.close()
 
         return entries
-        
-    # Get the timestamp of the most recently added row of the specified table
-    # the timestamp is returned as a datetime object!
+    
+    """
+    Get the timestamp of the most recently added row of the specified table
+    The timestamp is returned as a datetime object!
+    If the query returns None, it means that the recent_queue table is empty.
+    In this case, the epoch time is returned. (1970-01-01 00:00:00)
+    """
     def get_recent_timestamp(self, table_name):
         conn = self.create_connection()
         cur = conn.cursor()
 
         cur.execute("SELECT timestamp FROM {} ORDER BY timestamp DESC LIMIT 1".format(table_name))
 
-        row = cur.fetchone()[0]
+        result = cur.fetchone()
+        
+        row = datetime.datetime.utcfromtimestamp(0) if result is None else result[0]
 
         conn.commit()
         cur.close()
@@ -503,14 +516,14 @@ class Bot:
         return row
         
     # Get the time difference between now and when the most recent tweet was posted
-    # Returns a timedelta object!
+    # Returns the seconds of the timedelta object!
     def get_time_since_last_tweet(self):
         timestamp = datetime.datetime.now()
         recent_tweet_timestamp = self.get_recent_timestamp(self.recent_queue_table)
         
         time_difference = timestamp - recent_tweet_timestamp
         
-        return time_difference
+        return time_difference.total_seconds()
         
     """
     Checks if the bot is allowed to tweet
@@ -522,4 +535,4 @@ class Bot:
     
     """
     def can_tweet(self):
-        return self.tweet_enabled and self.count_rows(self.queue_table) > 0 and self.get_time_since_last_tweet().seconds > self.tweet_timeout
+        return self.tweet_enabled and self.count_rows(self.queue_table) > 0 and self.get_time_since_last_tweet() > self.tweet_timeout
