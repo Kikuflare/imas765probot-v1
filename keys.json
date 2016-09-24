@@ -1,29 +1,30 @@
 {
-	"app" : {
-		"enabled" : true,
-		"consumer_key" : "example",
-		"consumer_secret" : "example",
-		"database_url" : "example",
-		"tweet_timeout" : 600,
+  "app" : {
+    "enabled" : true,
+    "consumer_key" : "example",
+    "consumer_secret" : "example",
+    "database_url" : "example",
+    "tweet_timeout" : 600,
     "shuffle_mode" : true
-	},
-	
-	"example" : {
-		"tweet_enabled" : true,
-		"follow_back_enabled" : true,
-		"unfollow_enabled" : true,
-		"screen_name" : "example",
-		"access_token" : "example",
-		"access_token_secret" : "example",
-		"bucket_name" : "example",
-		"bucket_directory" : "example",
-		"queue_table" : "example",
-		"recent_queue_table" : "example",
-		"request_sent_table" : "example",
-		"recent_limit" : 96,
-		"max_download_attempts" : 3,
-		"max_tweet_attempts" : 3,
-		"follower_retrieve_limit" : 20
-	}
-	
+  },
+  
+  "example" : {
+    "tweet_enabled" : true,
+    "follow_back_enabled" : true,
+    "unfollow_enabled" : true,
+    "preload" : true,
+    "screen_name" : "example",
+    "access_token" : "example",
+    "access_token_secret" : "example",
+    "bucket_name" : "example",
+    "bucket_directory" : "example",
+    "queue_table" : "example",
+    "recent_queue_table" : "example",
+    "request_sent_table" : "example",
+    "recent_limit" : 96,
+    "max_download_attempts" : 3,
+    "max_tweet_attempts" : 3,
+    "follower_retrieve_limit" : 20
+  }
+  
 }

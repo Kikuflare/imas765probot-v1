@@ -4,6 +4,7 @@ import json
 import time
 import datetime
 from random import sample
+import concurrent.futures
 from bot import Bot
 
 
@@ -70,31 +71,42 @@ def main():
         follow back or unfollow order.
         """
         if minute % 60 == 0:
-            if shuffle_mode:
-                for index in sample(range(len(bots)),len(bots)):
-                    if bots[index].can_tweet():
-                        bots[index].tweet()
-            else:
-                for bot in bots:
-                    if bot.can_tweet():
-                        bot.tweet()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                if shuffle_mode:
+                    for index in sample(range(len(bots)),len(bots)):
+                        if bots[index].can_tweet():
+                            executor.submit(bots[index].tweet)
+                else:
+                    for bot in bots:
+                        if bot.can_tweet():
+                            executor.submit(bot.tweet)
                 
         # Follow back users (every 30 minutes at minute 15 and 45)
         if (minute + 15) % 30 == 0:
-            for bot in bots:
-                if bot.follow_back_enabled:
-                    bot.follow_back()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for bot in bots:
+                    if bot.follow_back_enabled:
+                        executor.submit(bot.follow_back)
                 
         # Unfollow users who are no longer following (every hour at minute 30)
         if (minute + 30) % 60 == 0:
-            for bot in bots:
-                if bot.unfollow_enabled:
-                    bot.unfollow()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for bot in bots:
+                    if bot.unfollow_enabled:
+                        executor.submit(bot.unfollow)
+                    
+        # Preload files in advance if enabled
+        if (minute + 5) % 60 == 0:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for bot in bots:
+                    if bot.preload:
+                        executor.submit(bot.download_latest)
         
         # If a queue is empty, start a new queue
         for bot in bots:
-            if bot.count_rows(bot.queue_table) == 0:
-                bot.smart_queue()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                if bot.count_rows(bot.queue_table) == 0:
+                    executor.submit(bot.smart_queue)
             
         # Try to align next loop to be as close to HH:MM:00 as possible
         time.sleep(60 - datetime.datetime.now().second)

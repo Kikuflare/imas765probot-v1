@@ -23,6 +23,7 @@ class Bot:
         self.tweet_enabled = bot_keys['tweet_enabled']
         self.follow_back_enabled = bot_keys['follow_back_enabled']
         self.unfollow_enabled = bot_keys['unfollow_enabled']
+        self.preload = bot_keys['preload']
         self.screen_name = bot_keys['screen_name']
         self.access_token = bot_keys['access_token']
         self.access_token_secret = bot_keys['access_token_secret']
@@ -50,14 +51,44 @@ class Bot:
         to the local filesystem. Next, it will attempt to tweet the file. If successful, it
         will update the corresponding recent queue table with the latest file.    
         """
+        tweet = self.download_latest()
+
+        if tweet is not None:
+            filepath = tweet['filepath']
+            comment = tweet['comment']
+            
+            self.delete_row(self.queue_table, 'filepath', filepath)
+        
+            self.tweet_media(filepath, comment)
+            
+            # Push the tweeted file into the table of recent tweets, and remove the oldest entries
+            # from the table until the limit is reached
+            self.insert_recent(filepath)
+            row_count = self.count_rows(self.recent_queue_table)
+            if row_count > self.recent_limit:
+                for i in range(row_count - self.recent_limit):
+                    self.delete_oldest_row(self.recent_queue_table, 'timestamp')
+                
+            
+    def download_latest(self):
+        """
+        Get the latest filepath from the appropriate queue and attempt to download the file
+        from S3. Failure usually means that the file no longer exists in the bucket, so try
+        the next filepath in the queue if the file fails to download.
+        
+        If the download was successful, return the filepath and comment.
+        """
         for attempt in range(self.max_download_attempts):
-            # Pop the newest filepath from the queue, determine destination temp filepath
+            # Get the latest filepath from the queue, determine destination temp filepath
             row = self.get_newest_row(self.queue_table)
             filepath = row[0]
             comment = row[1]
-            self.delete_row(self.queue_table, 'filepath', filepath)
             temp_file = os.path.abspath(filepath)
             dirname = os.path.dirname(temp_file)
+            
+            # Skip downloading if the file already exists locally
+            if (os.path.isfile(temp_file)):
+                return {'filepath': filepath, 'comment': comment}
 
             # Create folder of the destination temp file, otherwise download_file will fail
             # with a FileNotFoundError
@@ -68,27 +99,21 @@ class Bot:
             # the next file in the queue.
             try:
                 self.s3.meta.client.download_file(self.bucket_name, filepath, temp_file)
+                return {'filepath': filepath, 'comment': comment}
             except FileNotFoundError as error:
                 print("{0}: Could not download file, the destination folder does not exist.".format(self.screen_name))
+                self.delete_row(self.queue_table, 'filepath', filepath)
                 continue
             except botocore.exceptions.ClientError as error:
                 print("{0}: Could not download file, the file does not exist in the bucket.".format(self.screen_name))
+                self.delete_row(self.queue_table, 'filepath', filepath)
                 continue
             except IsADirectoryError as error:
                 print("{0}: There was an error when saving the file (attempted to download a folder instead of a file).".format(self.screen_name))
+                self.delete_row(self.queue_table, 'filepath', filepath)
                 break
                 
-            self.tweet_media(filepath, comment)
-            
-            # Push the tweeted file into the table of recent tweets, and remove the oldest entries
-            # from the table until the limit is reached
-            self.insert_recent(filepath)
-            row_count = self.count_rows(self.recent_queue_table)
-            if row_count > self.recent_limit:
-                for i in range(row_count - self.recent_limit):
-                    self.delete_oldest_row(self.recent_queue_table, 'timestamp')
-                    
-            break
+        return None # If all three attempts fail, just return None
             
     def tweet_media(self, filepath, comment):
         # Takes an absolute file path to a media file and posts a tweet with the file.
@@ -178,7 +203,10 @@ class Bot:
                             if error.response.status_code == 403:
                                 # This error can occur if a previous follow request is sent to a protected account,
                                 # and the request is still pending approval by the user. It can also occur if the
-                                # user is blocking the account.
+                                # user is blocking the account or if the user has been suspended.
+                                #
+                                # Add the user to the table of sent requests to prevent this error from occurring.
+                                self.update_request_sent(follower.id_str, follower.screen_name)
                                 print("{0}: Could not follow user {1}. {2}".format(self.screen_name, follower.screen_name, error.reason))
                             elif error.response.status_code == 429:
                                 print("{0}: Could not follow user. Request limit reached.".format(self.screen_name))
