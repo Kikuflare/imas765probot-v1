@@ -22,4 +22,4 @@ File assets are stored on Amazon S3 and are downloaded to the local filesystem a
 
 I used herokupostgres to store file queues instead of keeping the queues in memory. This is done because Heroku worker dynos are cycled every 24 hours. Using a persistent database allows the queues to be preserved in between cycles.
 
-Contact me at https://twitter.com/Saiyushu for feedback, suggestions, submissions, or anything else.
+Contact me at https://twitter.com/Kikushiki for feedback, suggestions, submissions, or anything else.
