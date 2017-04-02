@@ -1,7 +1,7 @@
 # imas765probot
 
 ###### 2017-04-02 UPDATE:
-Ported to Node.js. This version (now called v1) will not be updated further.
+Ported to Node.js. This version (now called v1) will not be updated further.  
 https://github.com/Kikugumo/imas765probot-v2
 
 ## About
